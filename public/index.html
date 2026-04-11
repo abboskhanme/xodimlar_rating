@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Xodimlar Reytingi</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f2ff;--card:#fff;--border:#e5e0ff;
+  --purple:#7c5cbf;--purple2:#9b7dd6;--purple-light:#ede8ff;--purple-dark:#5a3fa0;
+  --green:#22c55e;--green-bg:#dcfce7;--green-dark:#16a34a;
+  --red:#ef4444;--red-bg:#fee2e2;--red-dark:#dc2626;
+  --text:#1e1b4b;--text2:#6b7280;--text3:#9ca3af;
+  --shadow:0 2px 12px rgba(124,92,191,.12);
+  --radius:16px;--radius-sm:11px;
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh}
+.app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;max-width:600px;margin:0 auto}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#7c5cbf 0%,#9b7dd6 100%);padding:14px 16px 12px;color:#fff;display:flex;align-items:center;gap:11px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(92,60,180,.28)}
+.header-icon{width:40px;height:40px;background:rgba(255,255,255,.2);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.header h1{font-size:17px;font-weight:900;line-height:1.1}
+.header-sub{font-size:10px;opacity:.75;margin-top:1px}
+
+/* OY TANLASH STRIP */
+.month-strip{background:linear-gradient(135deg,#6a4ab0 0%,#8a6cc8 100%);padding:8px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:66px;z-index:99;box-shadow:0 2px 8px rgba(92,60,180,.18)}
+.month-label{font-size:11px;color:rgba(255,255,255,.75);font-weight:700;flex-shrink:0;white-space:nowrap}
+.month-scroll{display:flex;gap:6px;overflow-x:auto;flex:1;scrollbar-width:none;-ms-overflow-style:none}
+.month-scroll::-webkit-scrollbar{display:none}
+.month-chip{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);transition:all .15s;white-space:nowrap}
+.month-chip.active{background:#fff;color:var(--purple);border-color:#fff}
+.month-chip:active{transform:scale(.95)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:12px 12px 80px}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:600px;background:#fff;border-top:1.5px solid var(--border);display:flex;z-index:200;box-shadow:0 -4px 20px rgba(124,92,191,.10)}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px 11px;gap:3px;cursor:pointer;border:none;background:none;font-family:'Nunito',sans-serif;transition:all .15s;color:var(--text3)}
+.bnav-btn.active{color:var(--purple)}
+.bnav-icon{font-size:22px;line-height:1;transition:transform .15s}
+.bnav-label{font-size:10px;font-weight:700;letter-spacing:.3px}
+.bnav-btn.active .bnav-icon{transform:scale(1.12)}
+
+/* SECTIONS */
+.sec{display:none}.sec.active{display:block}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:13px}
+.stat-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:14px;text-align:center}
+.stat-v{font-size:26px;font-weight:900;color:var(--purple)}
+.stat-l{font-size:11px;color:var(--text2);margin-top:2px;font-weight:600}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-top{background:#dcfce7;color:#15803d}
+.badge-mid{background:#fef3c7;color:#92400e}
+.badge-ok{background:#dbeafe;color:#1d4ed8}
+.badge-low{background:#fee2e2;color:#b91c1c}
+
+/* LEADERBOARD */
+.lb-full{display:flex;flex-direction:column;gap:8px}
+.lb-item{background:var(--card);border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .17s}
+.lb-item:active{transform:scale(.98)}
+.lb-rank{font-size:17px;font-weight:900;width:26px;text-align:center;flex-shrink:0}
+.lb-rank.r1{color:#f59e0b}.lb-rank.r2{color:#94a3b8}.lb-rank.r3{color:#b45309}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-weight:800;font-size:13px}
+.lb-bar{height:4px;background:var(--purple-light);border-radius:10px;margin-top:5px;overflow:hidden}
+.lb-bar-f{height:100%;background:var(--purple);border-radius:10px}
+.lb-pts{font-size:20px;font-weight:900;color:var(--purple);flex-shrink:0}
+
+/* AVATAR */
+.avatar{border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex-shrink:0}
+
+/* XODIMLAR LIST */
+.emp-list-full{display:flex;flex-direction:column;gap:8px}
+.emp-row{background:var(--card);border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .16s}
+.emp-row:active{transform:scale(.98)}
+.emp-row-info{flex:1;min-width:0}
+.emp-row-name{font-weight:800;font-size:14px}
+.emp-row-role{font-size:11px;color:var(--text2);margin-top:1px}
+.emp-row-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.emp-row-score{font-size:22px;font-weight:900;color:var(--purple)}
+
+/* DETAIL */
+.detail-wrap{display:none}.detail-wrap.open{display:block}
+.back-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px;transition:all .15s}
+.back-btn:active{border-color:var(--purple);color:var(--purple)}
+.detail-hdr{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:16px;margin-bottom:11px}
+.det-top{display:flex;align-items:center;gap:13px;margin-bottom:13px}
+.det-name{font-size:17px;font-weight:900}
+.det-role{font-size:12px;color:var(--text2);margin-top:2px}
+.det-sboxes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sbox{border-radius:11px;padding:10px;text-align:center}
+.sbox-v{font-size:19px;font-weight:900}
+.sbox-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.sbox.purple{background:var(--purple-light)}.sbox.purple .sbox-v{color:var(--purple)}
+.sbox.green{background:#dcfce7}.sbox.green .sbox-v{color:#16a34a}
+.sbox.red{background:#fee2e2}.sbox.red .sbox-v{color:#dc2626}
+
+/* PAST OY UYORTI */
+.past-month-banner{background:#fef3c7;border:1.5px solid #fde68a;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;font-weight:700;color:#92400e;margin-bottom:11px;display:flex;align-items:center;gap:8px}
+
+/* ACTION CARDS */
+.action-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:15px;margin-bottom:10px}
+.action-title{font-weight:800;font-size:13px;margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.aicon{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.dlabel{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.dselect{width:100%;padding:11px 36px 11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;background:var(--bg);color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.dselect:focus{outline:none;border-color:var(--purple)}
+.action-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.pts-chip{border-radius:10px;padding:10px 13px;font-size:14px;font-weight:900;flex-shrink:0}
+.pts-chip.pos{background:#dcfce7;color:#16a34a}
+.pts-chip.neg{background:#fee2e2;color:#dc2626}
+.apply-btn{flex:1;padding:12px;border:none;border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all .16s}
+.apply-btn.pos{background:var(--green);color:#fff}
+.apply-btn.neg{background:var(--red);color:#fff}
+.apply-btn:active{transform:scale(.97)}
+.apply-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* HISTORY */
+.history-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:15px;margin-bottom:10px}
+.history-title{font-weight:800;font-size:13px;margin-bottom:10px}
+.hist-list{display:flex;flex-direction:column;gap:6px;max-height:250px;overflow-y:auto}
+.hist-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:9px;font-size:12px}
+.hdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.htext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpts{font-weight:900;font-size:12px;flex-shrink:0}
+.htime{font-size:10px;color:var(--text3);flex-shrink:0}
+.empty-h{text-align:center;color:var(--text3);padding:20px;font-size:13px}
+
+/* BOSHQARUV */
+.admin-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:15px;margin-bottom:10px}
+.admin-title{font-weight:800;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.flabel{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.finput,.fselect2{padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:14px;background:var(--bg);color:var(--text);width:100%;transition:border-color .15s}
+.finput:focus,.fselect2:focus{outline:none;border-color:var(--purple)}
+.fselect2{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px}
+.sbtn{width:100%;padding:13px;border:none;border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .15s;margin-top:2px}
+.sbtn.primary{background:var(--purple);color:#fff}
+.sbtn.danger{background:var(--red);color:#fff}
+.sbtn:active{transform:scale(.98)}
+.sbtn:disabled{opacity:.45;cursor:not-allowed}
+.level-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.level-row:last-child{border-bottom:none}
+.ldot{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.level-text{font-size:13px;line-height:1.4}
+.emp-manage-row{background:var(--bg);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.emr-info{flex:1;min-width:0}
+.emr-name{font-weight:800;font-size:13px}
+.emr-score{font-size:11px;color:var(--text2)}
+.del-btn{width:34px;height:34px;border-radius:9px;background:#fee2e2;color:var(--red);border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.del-btn:active{background:var(--red);color:#fff}
+
+/* TOAST */
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(20px);padding:11px 20px;border-radius:12px;font-size:13px;font-weight:700;color:#fff;opacity:0;transition:all .28s;z-index:9999;max-width:320px;white-space:nowrap;pointer-events:none;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.success{background:#16a34a}.toast.error{background:#dc2626}.toast.info{background:var(--purple)}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(30,27,75,.45);display:flex;align-items:flex-end;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .22s}
+.modal.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--card);border-radius:22px 22px 0 0;padding:24px 20px 32px;width:100%;max-width:500px;transform:translateY(40px);transition:transform .25s}
+.modal.open .modal-box{transform:translateY(0)}
+.modal-title{font-weight:900;font-size:16px;margin-bottom:6px}
+.modal-msg{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.modal-btns{display:flex;gap:10px}
+.modal-cancel{flex:1;padding:13px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer}
+.modal-ok{flex:1;padding:13px;border-radius:var(--radius-sm);border:none;background:var(--purple);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer}
+
+/* LOADING */
+.loading{text-align:center;padding:36px;color:var(--text3)}
+.spinner{width:26px;height:26px;border:3px solid var(--purple-light);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sec-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-icon">🏆</div>
+    <div>
+      <h1>Xodimlar Reytingi</h1>
+      <div class="header-sub">Oylik ballik tizim</div>
+    </div>
+  </div>
+
+  <!-- OY TANLASH STRIP -->
+  <div class="month-strip">
+    <div class="month-label">📅 Oy:</div>
+    <div class="month-scroll" id="month-scroll"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+
+    <!-- REYTING -->
+    <div class="sec active" id="sec-reyting">
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="spinner" style="width:20px;height:20px;margin:6px auto"></div></div>
+        <div class="stat-card"></div><div class="stat-card"></div><div class="stat-card"></div>
+      </div>
+      <div class="sec-title">🏅 Reyting ro'yxati</div>
+      <div class="lb-full" id="lb-list"></div>
+    </div>
+
+    <!-- XODIMLAR -->
+    <div class="sec" id="sec-xodimlar">
+      <div id="xod-list-view">
+        <div class="emp-list-full" id="emp-list-full"></div>
+      </div>
+      <div class="detail-wrap" id="xod-detail-view">
+        <button class="back-btn" onclick="backToEmpList()">← Orqaga</button>
+        <div id="detail-inner"></div>
+      </div>
+    </div>
+
+    <!-- BOSHQARUV -->
+    <div class="sec" id="sec-boshqaruv">
+      <!-- Darajalar -->
+      <div class="admin-card">
+        <div class="admin-title">📊 Daraja va bonuslar</div>
+        <div class="level-row"><div class="ldot" style="background:#16a34a"></div><div class="level-text"><strong>250+ ball → TOP daraja</strong><br><span style="color:#16a34a">1,000,000 so'm bonus ✅</span></div></div>
+        <div class="level-row"><div class="ldot" style="background:#d97706"></div><div class="level-text"><strong>210–249 → O'rta daraja</strong><br><span style="color:#d97706">500,000 so'm bonus ✅</span></div></div>
+        <div class="level-row"><div class="ldot" style="background:#2563eb"></div><div class="level-text"><strong>120–209 → Qoniqarli</strong><br>Bonus yo'q</div></div>
+        <div class="level-row"><div class="ldot" style="background:#dc2626"></div><div class="level-text"><strong>120 dan past → Past daraja</strong><br><span style="color:#dc2626">Oylik 1,000,000 so'm kamayadi ❌</span></div></div>
+      </div>
+
+      <!-- Yangi xodim -->
+      <div class="admin-card">
+        <div class="admin-title">➕ Yangi xodim qo'shish</div>
+        <div class="form-group">
+          <div class="flabel">Ism</div>
+          <input class="finput" id="a-name" placeholder="Xodim ismi" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <div class="flabel">Lavozim (ixtiyoriy)</div>
+          <input class="finput" id="a-role" placeholder="Masalan: Ofis xodimi" autocomplete="off">
+        </div>
+        <button class="sbtn primary" id="add-emp-btn" onclick="addEmp()">✅ Qo'shish</button>
+      </div>
+
+      <!-- Boshqarish -->
+      <div class="admin-card">
+        <div class="admin-title">👥 Xodimlarni boshqarish</div>
+        <div id="manage-emp-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="bnav-btn active" id="bnav-reyting" onclick="goTab('reyting')">
+      <div class="bnav-icon">🏅</div>
+      <div class="bnav-label">Reyting</div>
+    </button>
+    <button class="bnav-btn" id="bnav-xodimlar" onclick="goTab('xodimlar')">
+      <div class="bnav-icon">👥</div>
+      <div class="bnav-label">Xodimlar</div>
+    </button>
+    <button class="bnav-btn" id="bnav-boshqaruv" onclick="goTab('boshqaruv')">
+      <div class="bnav-icon">⚙️</div>
+      <div class="bnav-label">Boshqaruv</div>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="conf-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="conf-title">Tasdiqlaysizmi?</div>
+    <div class="modal-msg" id="conf-msg"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeConf()">Bekor</button>
+      <button class="modal-ok" id="conf-ok">Ha, davom eting</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS=['#7c5cbf','#e84393','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316'];
+const OY_NOMLARI=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+const POS=[
+  {label:"⏰ Vaqtida kelish (imzo qo'yilgan)",pts:1},
+  {label:"📋 Kunlik hisobot topshirdi",pts:1},
+  {label:"👔 Forma (dress code) rioya",pts:2},
+  {label:"🤝 Mijozga hurmat bilan muomala",pts:2},
+  {label:"✅ Zakaz / buyurtma oldi",pts:5},
+  {label:"🧹 Ish joyi tozaligi (isbot bilan)",pts:2},
+  {label:"📦 Mahsulot ta'minlash",pts:5},
+  {label:"🙌 Jamoaga yordam (isbot bilan)",pts:2},
+  {label:"🌙 Kech ketish 20:00 dan keyin",pts:1},
+  {label:"🌙 Kech ketish 21:00 dan keyin",pts:2},
+  {label:"🌙 Kech ketish 23:00 dan keyin",pts:3},
+  {label:"🌙 Kech ketish 24:00 dan keyin",pts:5},
+  {label:"⚖️ Qonuniy ish bajarish (isbot bilan)",pts:2},
+  {label:"📈 Kunlik ishlab chiqarish / yeguv plani",pts:1},
+];
+const NEG=[
+  {label:"⏱️ Ishga kechikish",pts:-2},
+  {label:"📭 Kunlik hisobot topshirmadi",pts:-3},
+  {label:"👔 Dress code buzilishi",pts:-2},
+  {label:"😠 Mijozga qo'pollik / hurmatsizlik",pts:-5},
+  {label:"❌ Zakazni yo'qotish (xodim aybi)",pts:-7},
+  {label:"🗑️ Ish joyi iflos / tartibsiz",pts:-2},
+  {label:"📉 Mahsulot yetishmovchiligi",pts:-5},
+  {label:"🚫 Jamoaga yordam bermadi / konflikt",pts:-3},
+  {label:"🏃 Erta ketish (sababsiz)",pts:-4},
+  {label:"🚫 Rahbar topshirig'ini bajarmaslik",pts:-5},
+  {label:"📉 Ishlab chiqarish planini bajarmadi",pts:-2},
+  {label:"❗ Sababsiz ishga kelmaslik",pts:-10},
+  {label:"⚠️ 3 marta ketma-ket kechikish",pts:-5},
+  {label:"🔴 Mijozdan jiddiy shikoyat",pts:-10},
+];
+
+let curTab = 'reyting';
+let curEmpId = null;
+let confCb = null;
+let selectedMonth = todayMonth();
+let availableMonths = [];
+
+// ── UTILS ──
+function todayMonth() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabel(m) {
+  const [y, mo] = m.split('-');
+  return OY_NOMLARI[+mo-1] + ' ' + y;
+}
+function isCurrentMonth(m) { return m === todayMonth(); }
+
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api' + path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function lvl(s) {
+  if (s >= 250) return {lbl:'TOP daraja', cls:'badge-top', pct:100};
+  if (s >= 210) return {lbl:"O'rta daraja", cls:'badge-mid', pct:Math.round(s/250*100)};
+  if (s >= 120) return {lbl:'Qoniqarli', cls:'badge-ok', pct:Math.round(s/250*100)};
+  return {lbl:'Past daraja', cls:'badge-low', pct:Math.max(4,Math.round(s/250*100))};
+}
+function clr(e) { return COLORS[(e.color_idx||0) % COLORS.length]; }
+function fmtTime(ts) {
+  const d = new Date(+ts);
+  return d.toLocaleDateString('uz-UZ',{month:'short',day:'numeric'}) + ' ' +
+         d.toLocaleTimeString('uz-UZ',{hour:'2-digit',minute:'2-digit'});
+}
+const medals=['🥇','🥈','🥉'];
+
+// ── OY TANLASH ──
+async function loadMonths() {
+  try {
+    const months = await api('/months');
+    availableMonths = months;
+    // Joriy oy yo'q bo'lsa qo'sh
+    const cur = todayMonth();
+    if (!availableMonths.includes(cur)) availableMonths.unshift(cur);
+    renderMonthStrip();
+  } catch(e) {}
+}
+
+function renderMonthStrip() {
+  const strip = document.getElementById('month-scroll');
+  strip.innerHTML = availableMonths.map(m => `
+    <div class="month-chip ${m===selectedMonth?'active':''}" onclick="selectMonth('${m}')">
+      ${monthLabel(m)}${m===todayMonth()?' ✦':''}
+    </div>
+  `).join('');
+  // Faol chipga scroll
+  setTimeout(() => {
+    const active = strip.querySelector('.month-chip.active');
+    if (active) active.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  }, 100);
+  // Reset label yangilash
+  const rl = document.getElementById('reset-month-lbl');
+  if (rl) rl.textContent = monthLabel(selectedMonth);
+}
+
+function selectMonth(m) {
+  selectedMonth = m;
+  renderMonthStrip();
+  // Joriy tabni qayta yuklash
+  if (curTab==='reyting') loadReyting();
+  if (curTab==='xodimlar') { if (curEmpId) openEmpDetail(curEmpId); else loadEmpList(); }
+  if (curTab==='boshqaruv') loadBoshqaruv();
+}
+
+// ── NAVIGATION ──
+const TABS=['reyting','xodimlar','boshqaruv'];
+function goTab(tab) {
+  curTab = tab;
+  TABS.forEach(t => {
+    document.getElementById('sec-'+t).classList.toggle('active', t===tab);
+    document.getElementById('bnav-'+t).classList.toggle('active', t===tab);
+  });
+  document.getElementById('content').scrollTop = 0;
+  if (tab==='reyting') loadReyting();
+  if (tab==='xodimlar') { backToEmpList(); loadEmpList(); }
+  if (tab==='boshqaruv') loadBoshqaruv();
+}
+
+// ── REYTING ──
+async function loadReyting() {
+  try {
+    const [emps, stats] = await Promise.all([
+      api('/employees?month='+selectedMonth),
+      api('/stats?month='+selectedMonth)
+    ]);
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat-card"><div class="stat-v">${stats.total}</div><div class="stat-l">Jami xodim</div></div>
+      <div class="stat-card"><div class="stat-v">${stats.totalScore}</div><div class="stat-l">Umumiy ball</div></div>
+      <div class="stat-card"><div class="stat-v">${stats.top}</div><div class="stat-l">Eng yuqori</div></div>
+      <div class="stat-card"><div class="stat-v">${stats.above120}</div><div class="stat-l">120+ ball</div></div>
+    `;
+    const mx = emps[0] ? emps[0].score : 250;
+    document.getElementById('lb-list').innerHTML = emps.map((e,i) => {
+      const l=lvl(e.score), cr=clr(e);
+      return `<div class="lb-item" onclick="openEmpDetail('${e.id}','xodimlar')">
+        <div class="lb-rank ${i<3?'r'+(i+1):''}">${i<3?medals[i]:i+1}</div>
+        <div class="avatar" style="background:${cr};width:38px;height:38px;font-size:14px">${e.name.slice(0,2)}</div>
+        <div class="lb-info">
+          <div class="lb-name">${e.name}</div>
+          <div style="margin-top:3px"><span class="badge ${l.cls}">${l.lbl}</span></div>
+          <div class="lb-bar"><div class="lb-bar-f" style="width:${mx>0?Math.round(e.score/mx*100):0}%"></div></div>
+        </div>
+        <div class="lb-pts">${e.score}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { showToast("Server bilan aloqa yo'q",'error'); }
+}
+
+// ── XODIMLAR LIST ──
+async function loadEmpList() {
+  document.getElementById('xod-list-view').style.display='';
+  document.getElementById('xod-detail-view').classList.remove('open');
+  try {
+    const emps = await api('/employees?month='+selectedMonth);
+    document.getElementById('emp-list-full').innerHTML = emps.map(e => {
+      const l=lvl(e.score), cr=clr(e);
+      return `<div class="emp-row" onclick="openEmpDetail('${e.id}')">
+        <div class="avatar" style="background:${cr};width:42px;height:42px;font-size:15px">${e.name.slice(0,2)}</div>
+        <div class="emp-row-info">
+          <div class="emp-row-name">${e.name}</div>
+          <div style="color:var(--text2);font-size:11px">${e.role}</div>
+          <div style="margin-top:4px"><span class="badge ${l.cls}">${l.lbl}</span></div>
+        </div>
+        <div class="emp-row-right">
+          <div class="emp-row-score">${e.score}</div>
+          <div style="font-size:10px;color:var(--text3)">ball</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { showToast('Xatolik yuz berdi','error'); }
+}
+
+function backToEmpList() {
+  document.getElementById('xod-list-view').style.display='';
+  document.getElementById('xod-detail-view').classList.remove('open');
+  curEmpId = null;
+}
+
+async function openEmpDetail(id, switchTab) {
+  if (switchTab) { goTab(switchTab); await new Promise(r=>setTimeout(r,50)); }
+  curEmpId = id;
+  document.getElementById('xod-list-view').style.display='none';
+  const dv = document.getElementById('xod-detail-view');
+  dv.classList.add('open');
+  document.getElementById('detail-inner').innerHTML='<div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>';
+  document.getElementById('content').scrollTop=0;
+
+  try {
+    const [empsList, hist] = await Promise.all([
+      api('/employees?month='+selectedMonth),
+      api('/employees/'+id+'/history?month='+selectedMonth)
+    ]);
+    const emp = empsList.find(e=>e.id===id);
+    if (!emp) { showToast('Xodim topilmadi','error'); return; }
+
+    const l=lvl(emp.score), cr=clr(emp);
+    const pos=hist.filter(h=>h.points>0).reduce((s,h)=>s+h.points,0);
+    const neg=hist.filter(h=>h.points<0).reduce((s,h)=>s+h.points,0);
+    const isPast = !isCurrentMonth(selectedMonth);
+
+    const posOpts=POS.map((a,i)=>`<option value="${i}">${a.label} (+${a.pts})</option>`).join('');
+    const negOpts=NEG.map((a,i)=>`<option value="${i}">${a.label} (${a.pts})</option>`).join('');
+
+    document.getElementById('detail-inner').innerHTML=`
+      ${isPast ? `<div class="past-month-banner">📅 Ko'rish rejimi — ${monthLabel(selectedMonth)}. Ball qo'shish/ayirish faqat joriy oyda mumkin.</div>` : ''}
+
+      <div class="detail-hdr">
+        <div class="det-top">
+          <div class="avatar" style="background:${cr};width:54px;height:54px;border-radius:13px;font-size:19px">${emp.name.slice(0,2)}</div>
+          <div>
+            <div class="det-name">${emp.name}</div>
+            <div style="color:var(--text2);font-size:12px;margin-top:2px">${emp.role}</div>
+            <div style="margin-top:6px"><span class="badge ${l.cls}">${l.lbl}</span></div>
+          </div>
+        </div>
+        <div class="det-sboxes">
+          <div class="sbox purple"><div class="sbox-v">${emp.score}</div><div class="sbox-l">Jami</div></div>
+          <div class="sbox green"><div class="sbox-v">+${pos}</div><div class="sbox-l">Qo'shildi</div></div>
+          <div class="sbox red"><div class="sbox-v">${neg||0}</div><div class="sbox-l">Ayirildi</div></div>
+        </div>
+      </div>
+
+      ${!isPast ? `
+      <div class="action-card">
+        <div class="action-title"><div class="aicon" style="background:#dcfce7">✅</div>Ball qo'shish</div>
+        <div>
+          <div class="dlabel">Harakat tanlang</div>
+          <select class="dselect" id="pos-sel" onchange="updatePts('pos')">${posOpts}</select>
+        </div>
+        <div class="action-row">
+          <div class="pts-chip pos" id="pos-chip">+${POS[0].pts} ball</div>
+          <button class="apply-btn pos" id="pos-btn" onclick="applyAction('${id}','pos')">✅ Qo'shish</button>
+        </div>
+      </div>
+
+      <div class="action-card">
+        <div class="action-title"><div class="aicon" style="background:#fee2e2">❌</div>Jarima ayirish</div>
+        <div>
+          <div class="dlabel">Jarima tanlang</div>
+          <select class="dselect" id="neg-sel" onchange="updatePts('neg')">${negOpts}</select>
+        </div>
+        <div class="action-row">
+          <div class="pts-chip neg" id="neg-chip">${NEG[0].pts} ball</div>
+          <button class="apply-btn neg" id="neg-btn" onclick="applyAction('${id}','neg')">❌ Ayirish</button>
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="history-card">
+        <div class="history-title">📜 ${monthLabel(selectedMonth)} — harakatlar (${hist.length})</div>
+        <div class="hist-list">
+          ${hist.length ? hist.map(h=>`
+            <div class="hist-item">
+              <div class="hdot" style="background:${h.points>0?'#22c55e':'#ef4444'}"></div>
+              <span class="htext">${h.label}</span>
+              <span class="hpts" style="color:${h.points>0?'#16a34a':'#dc2626'}">${h.points>0?'+':''}${h.points}</span>
+              <span class="htime">${fmtTime(h.created_at)}</span>
+            </div>`).join('') :
+          '<div class="empty-h">Bu oyda hech qanday harakat yo\'q</div>'}
+        </div>
+      </div>
+    `;
+  } catch(e) { showToast('Xatolik yuz berdi','error'); }
+}
+
+function updatePts(type) {
+  if (type==='pos') {
+    const i=+document.getElementById('pos-sel').value;
+    document.getElementById('pos-chip').textContent='+'+POS[i].pts+' ball';
+  } else {
+    const i=+document.getElementById('neg-sel').value;
+    document.getElementById('neg-chip').textContent=NEG[i].pts+' ball';
+  }
+}
+
+async function applyAction(id, type) {
+  if (!isCurrentMonth(selectedMonth)) { showToast("Faqat joriy oyda ball qo'shish mumkin",'error'); return; }
+  const list=type==='pos'?POS:NEG;
+  const sel=document.getElementById(type+'-sel');
+  const btn=document.getElementById(type+'-btn');
+  const action=list[+sel.value];
+  btn.disabled=true;
+  try {
+    await api('/employees/'+id+'/action','POST',{points:action.pts,label:action.label,month:selectedMonth});
+    showToast((action.pts>0?'+':'')+action.pts+' ball: '+action.label.replace(/^\S+\s/,''),'success');
+    // Oylar listini yangilash (yangi oy bo'lishi mumkin)
+    await loadMonths();
+    await openEmpDetail(id);
+  } catch(e) {
+    showToast('Xatolik yuz berdi','error');
+    btn.disabled=false;
+  }
+}
+
+// ── BOSHQARUV ──
+async function loadBoshqaruv() {
+  const rl=document.getElementById('reset-month-lbl');
+  if (rl) rl.textContent=monthLabel(selectedMonth);
+  try {
+    const emps=await api('/employees?month='+selectedMonth);
+    document.getElementById('manage-emp-list').innerHTML=emps.map(e=>`
+      <div class="emp-manage-row">
+        <div class="avatar" style="background:${clr(e)};width:34px;height:34px;border-radius:9px;font-size:13px">${e.name.slice(0,2)}</div>
+        <div class="emr-info">
+          <div class="emr-name">${e.name}</div>
+          <div class="emr-score">${e.score} ball — ${e.role}</div>
+        </div>
+        <button class="del-btn" onclick="confDeleteEmp('${e.id}','${e.name}')">🗑</button>
+      </div>
+    `).join('')||'<div style="text-align:center;color:var(--text3);padding:16px">Xodimlar yo\'q</div>';
+  } catch(e) {}
+}
+
+async function addEmp() {
+  const name=document.getElementById('a-name').value.trim();
+  const role=document.getElementById('a-role').value.trim();
+  if (!name) { showToast('Ism kiriting!','error'); return; }
+  const btn=document.getElementById('add-emp-btn');
+  btn.disabled=true;
+  try {
+    await api('/employees','POST',{name,role});
+    document.getElementById('a-name').value='';
+    document.getElementById('a-role').value='';
+    showToast(name.toUpperCase()+" qo'shildi",'success');
+    loadBoshqaruv();
+  } catch(e) { showToast('Xatolik yuz berdi','error'); }
+  btn.disabled=false;
+}
+
+function confDeleteEmp(id, name) {
+  showConf("Xodimni o'chirish", name+' va uning barcha tarixi (barcha oylar) o\'chib ketadi. Davom etasizmi?', async () => {
+    try {
+      await api('/employees/'+id,'DELETE');
+      showToast(name+" o'chirildi",'info');
+      loadBoshqaruv();
+    } catch(e) { showToast('Xatolik yuz berdi','error'); }
+  });
+}
+
+// ── MODAL ──
+function showConf(title,msg,cb) {
+  document.getElementById('conf-title').textContent=title;
+  document.getElementById('conf-msg').textContent=msg;
+  document.getElementById('conf-modal').classList.add('open');
+  confCb=cb;
+}
+function closeConf() { document.getElementById('conf-modal').classList.remove('open'); confCb=null; }
+document.getElementById('conf-ok').onclick=()=>{ closeConf(); if(confCb) confCb(); };
+document.getElementById('conf-modal').onclick=(e)=>{ if(e.target===e.currentTarget) closeConf(); };
+
+// ── TOAST ──
+function showToast(msg,type='info') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── INIT ──
+selectedMonth=todayMonth();
+loadMonths().then(()=>loadReyting());
+</script>
+</body>
+</html>
