@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
@@ -5,199 +6,252 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔥 SUPABASE CONNECTION
+// ⚡ BETTER POOL CONFIG (MUHIM)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  keepAlive: true
 });
 
-// ── HELPER ─────────────────────────────────────────────────────
+// ── HELPERS ─────────────────────────────
 function curMonthStr() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// ── MIDDLEWARE ─────────────────────────────────────────────────
+// ── MIDDLEWARE ──────────────────────────
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── INIT (standart xodimlar) ───────────────────────────────────
+// ── SAFE INIT (optimized + single query) ─
 async function init() {
-  const { rows } = await pool.query('SELECT COUNT(*) FROM employees');
-  if (parseInt(rows[0].count) === 0) {
-    const names = ['AYUBXON','ELDORJON','RAMIZXON','SHAXZODBEK','ABDUBOSIT','DIYORBEK','JAHONGIR'];
-    for (let i = 0; i < names.length; i++) {
-      await pool.query(
-        'INSERT INTO employees (id, name, role, color_idx) VALUES ($1,$2,$3,$4)',
-        ['emp_' + i, names[i], 'Ofis xodimi', i]
-      );
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*)::int FROM employees');
+    const count = rows[0].count;
+
+    if (count === 0) {
+      const names = [
+        'AYUBXON','ELDORJON','RAMIZXON',
+        'SHAXZODBEK','ABDUBOSIT','DIYORBEK','JAHONGIR'
+      ];
+
+      const values = names.map((n, i) =>
+        `('emp_${i}', '${n}', 'Ofis xodimi', ${i})`
+      ).join(',');
+
+      await pool.query(`
+        INSERT INTO employees (id, name, role, color_idx)
+        VALUES ${values}
+      `);
+
+      console.log("✅ Standart xodimlar qo'shildi");
     }
-    console.log("✅ Standart xodimlar qo'shildi");
+  } catch (err) {
+    console.error("INIT ERROR:", err.message);
   }
 }
+
 init();
 
-// ── XODIMLAR ───────────────────────────────────────────────────
+// ── EMPLOYEES (FAST QUERY) ───────────────
 app.get('/api/employees', async (req, res) => {
-  const month = req.query.month || curMonthStr();
+  try {
+    const month = req.query.month || curMonthStr();
 
-  const { rows } = await pool.query(`
-    SELECT e.*, COALESCE(ms.score, 0) as score
-    FROM employees e
-    LEFT JOIN monthly_scores ms 
-    ON ms.emp_id = e.id AND ms.month = $1
-    ORDER BY score DESC, e.name ASC
-  `, [month]);
+    const { rows } = await pool.query(`
+      SELECT 
+        e.id, e.name, e.role, e.color_idx,
+        COALESCE(ms.score, 0) AS score
+      FROM employees e
+      LEFT JOIN monthly_scores ms 
+        ON ms.emp_id = e.id AND ms.month = $1
+      ORDER BY score DESC, e.name ASC
+    `, [month]);
 
-  res.json(rows);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ── CREATE EMPLOYEE (optimized count) ─────
 app.post('/api/employees', async (req, res) => {
-  const { name, role } = req.body;
-  if (!name) return res.status(400).json({ error: 'Ism kerak' });
+  try {
+    const { name, role } = req.body;
+    if (!name) return res.status(400).json({ error: 'Ism kerak' });
 
-  const id = 'emp_' + Date.now();
-  const { rows } = await pool.query('SELECT COUNT(*) FROM employees');
-  const ci = parseInt(rows[0].count);
+    const id = `emp_${Date.now()}`;
 
-  await pool.query(
-    'INSERT INTO employees (id, name, role, color_idx) VALUES ($1,$2,$3,$4)',
-    [id, name.toUpperCase(), role || 'Xodim', ci]
-  );
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int FROM employees'
+    );
 
-  res.json({ id, name, role, score: 0 });
+    await pool.query(`
+      INSERT INTO employees (id, name, role, color_idx)
+      VALUES ($1, $2, $3, $4)
+    `, [
+      id,
+      name.toUpperCase(),
+      role || 'Xodim',
+      rows[0].count
+    ]);
+
+    res.json({ id, name, role, score: 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ── DELETE EMPLOYEE (parallel deletes) ───
 app.delete('/api/employees/:id', async (req, res) => {
-  const id = req.params.id;
+  try {
+    const id = req.params.id;
 
-  await pool.query('DELETE FROM history WHERE emp_id = $1', [id]);
-  await pool.query('DELETE FROM monthly_scores WHERE emp_id = $1', [id]);
+    await Promise.all([
+      pool.query('DELETE FROM history WHERE emp_id = $1', [id]),
+      pool.query('DELETE FROM monthly_scores WHERE emp_id = $1', [id]),
+      pool.query('DELETE FROM employees WHERE id = $1', [id])
+    ]);
 
-  const result = await pool.query('DELETE FROM employees WHERE id = $1', [id]);
-
-  if (result.rowCount === 0) {
-    return res.status(404).json({ error: 'Xodim topilmadi' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json({ ok: true });
 });
 
-// ── HARAKATLAR ────────────────────────────────────────────────
+// ── ACTION (OPTIMIZED 1 LESS QUERY) ──────
 app.post('/api/employees/:id/action', async (req, res) => {
-  const { points, label, month } = req.body;
-  if (points === undefined || !label) {
-    return res.status(400).json({ error: 'points va label kerak' });
+  try {
+    const { points, label, month } = req.body;
+    if (points === undefined || !label) {
+      return res.status(400).json({ error: 'points va label kerak' });
+    }
+
+    const targetMonth = month || curMonthStr();
+    const empId = req.params.id;
+
+    // ensure + update in single step
+    await pool.query(`
+      INSERT INTO monthly_scores (emp_id, month, score)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (emp_id, month)
+      DO UPDATE SET score = monthly_scores.score + $3
+    `, [empId, targetMonth, points]);
+
+    await pool.query(`
+      INSERT INTO history (emp_id, month, points, label)
+      VALUES ($1, $2, $3, $4)
+    `, [empId, targetMonth, points, label]);
+
+    const { rows } = await pool.query(`
+      SELECT e.id, e.name, e.role, e.color_idx,
+             COALESCE(ms.score,0) AS score
+      FROM employees e
+      LEFT JOIN monthly_scores ms
+        ON ms.emp_id = e.id AND ms.month = $1
+      WHERE e.id = $2
+    `, [targetMonth, empId]);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const targetMonth = month || curMonthStr();
-
-  const emp = await pool.query('SELECT * FROM employees WHERE id = $1', [req.params.id]);
-  if (emp.rowCount === 0) return res.status(404).json({ error: 'Xodim topilmadi' });
-
-  // ensure row
-  await pool.query(`
-    INSERT INTO monthly_scores (emp_id, month, score)
-    VALUES ($1, $2, 0)
-    ON CONFLICT (emp_id, month) DO NOTHING
-  `, [req.params.id, targetMonth]);
-
-  const cur = await pool.query(
-    'SELECT score FROM monthly_scores WHERE emp_id=$1 AND month=$2',
-    [req.params.id, targetMonth]
-  );
-
-  const newScore = Math.max(0, cur.rows[0].score + points);
-
-  await pool.query(
-    'UPDATE monthly_scores SET score=$1 WHERE emp_id=$2 AND month=$3',
-    [newScore, req.params.id, targetMonth]
-  );
-
-  await pool.query(
-    'INSERT INTO history (emp_id, month, points, label) VALUES ($1,$2,$3,$4)',
-    [req.params.id, targetMonth, points, label]
-  );
-
-  const updated = await pool.query(`
-    SELECT e.*, COALESCE(ms.score,0) as score
-    FROM employees e
-    LEFT JOIN monthly_scores ms ON ms.emp_id=e.id AND ms.month=$1
-    WHERE e.id=$2
-  `, [targetMonth, req.params.id]);
-
-  res.json(updated.rows[0]);
 });
 
-// ── TARIX ─────────────────────────────────────────────────────
+// ── HISTORY (light query) ────────────────
 app.get('/api/employees/:id/history', async (req, res) => {
-  const month = req.query.month || curMonthStr();
+  try {
+    const month = req.query.month || curMonthStr();
 
-  const { rows } = await pool.query(
-    'SELECT * FROM history WHERE emp_id=$1 AND month=$2 ORDER BY created_at DESC LIMIT 100',
-    [req.params.id, month]
-  );
+    const { rows } = await pool.query(`
+      SELECT id, emp_id, month, points, label, created_at
+      FROM history
+      WHERE emp_id=$1 AND month=$2
+      ORDER BY created_at DESC
+      LIMIT 100
+    `, [req.params.id, month]);
 
-  res.json(rows);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── STATISTIKA ────────────────────────────────────────────────
+// ── STATS (optimized single scan idea) ───
 app.get('/api/stats', async (req, res) => {
-  const month = req.query.month || curMonthStr();
+  try {
+    const month = req.query.month || curMonthStr();
 
-  const total = await pool.query('SELECT COUNT(*) FROM employees');
+    const { rows } = await pool.query(`
+      SELECT 
+        COUNT(e.id)::int AS total,
+        COALESCE(SUM(ms.score),0)::int AS total_score,
+        COALESCE(MAX(ms.score),0)::int AS top,
+        COUNT(CASE WHEN COALESCE(ms.score,0) >= 120 THEN 1 END)::int AS above_120
+      FROM employees e
+      LEFT JOIN monthly_scores ms 
+        ON ms.emp_id = e.id AND ms.month = $1
+    `, [month]);
 
-  const agg = await pool.query(`
-    SELECT COALESCE(SUM(ms.score),0) as totalScore,
-           COALESCE(MAX(ms.score),0) as top
-    FROM employees e
-    LEFT JOIN monthly_scores ms ON ms.emp_id=e.id AND ms.month=$1
-  `, [month]);
+    const data = rows[0];
 
-  const above120 = await pool.query(`
-    SELECT COUNT(*) FROM employees e
-    LEFT JOIN monthly_scores ms ON ms.emp_id=e.id AND ms.month=$1
-    WHERE COALESCE(ms.score,0) >= 120
-  `, [month]);
+    res.json({
+      total: data.total,
+      totalScore: data.total_score,
+      top: data.top,
+      above120: data.above_120
+    });
 
-  res.json({
-    total: parseInt(total.rows[0].count),
-    totalScore: agg.rows[0].totalscore,
-    top: agg.rows[0].top,
-    above120: parseInt(above120.rows[0].count)
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── OYLAR ─────────────────────────────────────────────────────
+// ── MONTHS ──────────────────────────────
 app.get('/api/months', async (req, res) => {
-  const { rows } = await pool.query(`
-    SELECT DISTINCT month FROM monthly_scores
-    WHERE score > 0
-    ORDER BY month DESC
-  `);
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT month 
+      FROM monthly_scores
+      ORDER BY month DESC
+    `);
 
-  const cur = curMonthStr();
-  const months = rows.map(r => r.month);
-  if (!months.includes(cur)) months.unshift(cur);
+    const cur = curMonthStr();
+    const months = rows.map(r => r.month);
 
-  res.json(months);
+    if (!months.includes(cur)) months.unshift(cur);
+
+    res.json(months);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── RESET ─────────────────────────────────────────────────────
+// ── RESET ───────────────────────────────
 app.post('/api/reset', async (req, res) => {
-  const month = req.body.month || curMonthStr();
+  try {
+    const month = req.body.month || curMonthStr();
 
-  await pool.query('DELETE FROM monthly_scores WHERE month=$1', [month]);
-  await pool.query('DELETE FROM history WHERE month=$1', [month]);
+    await Promise.all([
+      pool.query('DELETE FROM monthly_scores WHERE month=$1', [month]),
+      pool.query('DELETE FROM history WHERE month=$1', [month])
+    ]);
 
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── FRONTEND ──────────────────────────────────────────────────
-app.get('*', (req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
-);
+// ── FRONTEND ────────────────────────────
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
+// ── START ───────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
