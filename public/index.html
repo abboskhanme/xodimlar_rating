@@ -291,36 +291,34 @@ const COLORS=['#7c5cbf','#e84393','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5c
 const OY_NOMLARI=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
 
 const POS=[
-  {label:"⏰ Vaqtida kelish (imzo qo'yilgan)",pts:1},
-  {label:"📋 Kunlik hisobot topshirdi",pts:1},
-  {label:"👔 Forma (dress code) rioya",pts:2},
-  {label:"🤝 Mijozga hurmat bilan muomala",pts:2},
+  {label:"⏰ Vaqtida kelish (imzo qo'yilgan)"},
+  {label:"📋 Kunlik hisobot topshirdi"},
+  {label:"👔 Forma (dress code) rioya"},
+  {label:"🤝 Mijozga hurmat bilan muomala"},
   {label:"✅ Zakaz / buyurtma oldi",pts:5},
-  {label:"🧹 Ish joyi tozaligi (isbot bilan)",pts:2},
-  {label:"📦 Mahsulot ta'minlash",pts:5},
-  {label:"🙌 Jamoaga yordam (isbot bilan)",pts:2},
-  {label:"🌙 Kech ketish 20:00 dan keyin",pts:1},
-  {label:"🌙 Kech ketish 21:00 dan keyin",pts:2},
-  {label:"🌙 Kech ketish 23:00 dan keyin",pts:3},
-  {label:"🌙 Kech ketish 24:00 dan keyin",pts:5},
-  {label:"⚖️ Qonuniy ish bajarish (isbot bilan)",pts:2},
-  {label:"📈 Kunlik ishlab chiqarish / yeguv plani",pts:1},
+  {label:"🧹 Ish joyi tozaligi (isbot bilan)"},
+  {label:"📦 Mahsulot ta'minlash"},
+  {label:"🙌 Jamoaga yordam (isbot bilan)"},
+  {label:"🌙 Uyga kech ketish"},
+  {label:"⚖️ Qonuniy ish bajarish (isbot bilan)"},
+  {label:"📈 Kunlik ishlab chiqarish / yeguv plani"},
 ];
 const NEG=[
-  {label:"⏱️ Ishga kechikish",pts:-2},
-  {label:"📭 Kunlik hisobot topshirmadi",pts:-3},
-  {label:"👔 Dress code buzilishi",pts:-2},
-  {label:"😠 Mijozga qo'pollik / hurmatsizlik",pts:-5},
-  {label:"❌ Zakazni yo'qotish (xodim aybi)",pts:-7},
-  {label:"🗑️ Ish joyi iflos / tartibsiz",pts:-2},
-  {label:"📉 Mahsulot yetishmovchiligi",pts:-5},
-  {label:"🚫 Jamoaga yordam bermadi / konflikt",pts:-3},
-  {label:"🏃 Erta ketish (sababsiz)",pts:-4},
-  {label:"🚫 Rahbar topshirig'ini bajarmaslik",pts:-5},
-  {label:"📉 Ishlab chiqarish planini bajarmadi",pts:-2},
-  {label:"❗ Sababsiz ishga kelmaslik",pts:-10},
-  {label:"⚠️ 3 marta ketma-ket kechikish",pts:-5},
-  {label:"🔴 Mijozdan jiddiy shikoyat",pts:-10},
+  {label:"⏱️ Ishga kechikish"},
+  {label:"📭 Kunlik hisobot topshirmadi"},
+  {label:"👔 Dress code buzilishi"},
+  {label:"😠 Mijozga qo'pollik / hurmatsizlik"},
+  {label:"❌ Zakazni yo'qotish (xodim aybi)"},
+  {label:"🗑️ Ish joyi iflos / tartibsiz"},
+  {label:"📉 Mahsulot yetishmovchiligi"},
+  {label:"🚫 Jamoaga yordam bermadi / konflikt"},
+  {label:"🏃 Erta ketish (sababsiz)"},
+  {label:"🚫 Rahbar topshirig'ini bajarmaslik"},
+  {label:"📉 Ishlab chiqarish planini bajarmadi"},
+  {label:"❗ Sababsiz ishga kelmaslik"},
+  {label:"⚠️ 3 marta ketma-ket kechikish"},
+  {label:"🔴 Mijozdan jiddiy shikoyat"},
+  {label:"❌ Keldi-ketdi daftarini to'ldirmaslik"},
 ];
 
 let curTab = 'reyting';
@@ -496,8 +494,8 @@ async function openEmpDetail(id, switchTab) {
     const neg=hist.filter(h=>h.points<0).reduce((s,h)=>s+h.points,0);
     const isPast = !isCurrentMonth(selectedMonth);
 
-    const posOpts=POS.map((a,i)=>`<option value="${i}">${a.label} (+${a.pts})</option>`).join('');
-    const negOpts=NEG.map((a,i)=>`<option value="${i}">${a.label} (${a.pts})</option>`).join('');
+    const posOpts = POS.map((a,i)=>`<option value="${i}">${a.label}</option>`).join('');
+    const negOpts = NEG.map((a,i)=>`<option value="${i}">${a.label}</option>`).join('');
 
     document.getElementById('detail-inner').innerHTML=`
       ${isPast ? `<div class="past-month-banner">📅 Ko'rish rejimi — ${monthLabel(selectedMonth)}. Ball qo'shish/ayirish faqat joriy oyda mumkin.</div>` : ''}
@@ -519,29 +517,41 @@ async function openEmpDetail(id, switchTab) {
       </div>
 
       ${!isPast ? `
-      <div class="action-card">
-        <div class="action-title"><div class="aicon" style="background:#dcfce7">✅</div>Ball qo'shish</div>
-        <div>
-          <div class="dlabel">Harakat tanlang</div>
-          <select class="dselect" id="pos-sel" onchange="updatePts('pos')">${posOpts}</select>
-        </div>
-        <div class="action-row">
-          <div class="pts-chip pos" id="pos-chip">+${POS[0].pts} ball</div>
-          <button class="apply-btn pos" id="pos-btn" onclick="applyAction('${id}','pos')">✅ Qo'shish</button>
-        </div>
-      </div>
+      <!-- Ball qo'shish card -->
+<div class="action-card">
+  <div class="action-title"><div class="aicon" style="background:#dcfce7">✅</div>Ball qo'shish</div>
+  <div>
+    <div class="dlabel">Harakat tanlang</div>
+    <select class="dselect" id="pos-sel"></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+    <div class="dlabel" style="white-space:nowrap;margin:0">Ball:</div>
+    <input type="range" min="1" max="10" value="5" id="pos-range" oninput="document.getElementById('pos-chip').textContent='+'+this.value+' ball';document.getElementById('pos-range-out').textContent=this.value" style="flex:1;accent-color:var(--green)">
+    <div style="font-size:18px;font-weight:900;color:var(--green);min-width:22px;text-align:right" id="pos-range-out">5</div>
+  </div>
+  <div class="action-row">
+    <div class="pts-chip pos" id="pos-chip">+5 ball</div>
+    <button class="apply-btn pos" id="pos-btn" onclick="applyAction('${id}','pos')">✅ Qo'shish</button>
+  </div>
+</div>
 
-      <div class="action-card">
-        <div class="action-title"><div class="aicon" style="background:#fee2e2">❌</div>Jarima ayirish</div>
-        <div>
-          <div class="dlabel">Jarima tanlang</div>
-          <select class="dselect" id="neg-sel" onchange="updatePts('neg')">${negOpts}</select>
-        </div>
-        <div class="action-row">
-          <div class="pts-chip neg" id="neg-chip">${NEG[0].pts} ball</div>
-          <button class="apply-btn neg" id="neg-btn" onclick="applyAction('${id}','neg')">❌ Ayirish</button>
-        </div>
-      </div>
+<!-- Jarima card -->
+<div class="action-card">
+  <div class="action-title"><div class="aicon" style="background:#fee2e2">❌</div>Jarima ayirish</div>
+  <div>
+    <div class="dlabel">Jarima tanlang</div>
+    <select class="dselect" id="neg-sel"></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+    <div class="dlabel" style="white-space:nowrap;margin:0">Ball:</div>
+    <input type="range" min="1" max="10" value="5" id="neg-range" oninput="document.getElementById('neg-chip').textContent='-'+this.value+' ball';document.getElementById('neg-range-out').textContent=this.value" style="flex:1;accent-color:var(--red)">
+    <div style="font-size:18px;font-weight:900;color:var(--red);min-width:22px;text-align:right" id="neg-range-out">5</div>
+  </div>
+  <div class="action-row">
+    <div class="pts-chip neg" id="neg-chip">-5 ball</div>
+    <button class="apply-btn neg" id="neg-btn" onclick="applyAction('${id}','neg')">❌ Ayirish</button>
+  </div>
+</div>
       ` : ''}
 
       <div class="history-card">
@@ -558,30 +568,41 @@ async function openEmpDetail(id, switchTab) {
         </div>
       </div>
     `;
+    if (!isPast) {
+      document.getElementById('pos-sel').innerHTML = posOpts;
+      document.getElementById('neg-sel').innerHTML = negOpts;
+    }
   } catch(e) { showToast('Xatolik yuz berdi','error'); }
 }
 
 function updatePts(type) {
   if (type==='pos') {
     const i=+document.getElementById('pos-sel').value;
-    document.getElementById('pos-chip').textContent='+'+POS[i].pts+' ball';
+    const mult=+document.getElementById('pos-mult').value;
+    const pts=POS[i].pts*mult;
+    document.getElementById('pos-mult-out').textContent=mult+'x';
+    document.getElementById('pos-chip').textContent='+'+pts+' ball';
   } else {
     const i=+document.getElementById('neg-sel').value;
-    document.getElementById('neg-chip').textContent=NEG[i].pts+' ball';
+    const mult=+document.getElementById('neg-mult').value;
+    const pts=NEG[i].pts*mult;
+    document.getElementById('neg-mult-out').textContent=mult+'x';
+    document.getElementById('neg-chip').textContent=pts+' ball';
   }
 }
 
 async function applyAction(id, type) {
   if (!isCurrentMonth(selectedMonth)) { showToast("Faqat joriy oyda ball qo'shish mumkin",'error'); return; }
-  const list=type==='pos'?POS:NEG;
-  const sel=document.getElementById(type+'-sel');
-  const btn=document.getElementById(type+'-btn');
-  const action=list[+sel.value];
-  btn.disabled=true;
+  const list = type==='pos' ? POS : NEG;
+  const sel = document.getElementById(type+'-sel');
+  const range = document.getElementById(type+'-range');
+  const btn = document.getElementById(type+'-btn');
+  const action = list[+sel.value];
+  const chosenPts = type==='pos' ? +range.value : -(+range.value);
+  btn.disabled = true;
   try {
-    await api('/employees/'+id+'/action','POST',{points:action.pts,label:action.label,month:selectedMonth});
-    showToast((action.pts>0?'+':'')+action.pts+' ball: '+action.label.replace(/^\S+\s/,''),'success');
-    // Oylar listini yangilash (yangi oy bo'lishi mumkin)
+    await api('/employees/'+id+'/action','POST',{points:chosenPts, label:action.label, month:selectedMonth});
+    showToast((chosenPts>0?'+':'')+chosenPts+' ball: '+action.label.replace(/^\S+\s/,''),'success');
     await loadMonths();
     await openEmpDetail(id);
   } catch(e) {
