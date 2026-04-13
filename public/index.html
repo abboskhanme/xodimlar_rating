@@ -178,6 +178,38 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .spinner{width:26px;height:26px;border:3px solid var(--purple-light);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .sec-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px}
+
+/* ADMIN PIN MODAL */
+.pin-modal{position:fixed;inset:0;background:rgba(30,27,75,.55);display:flex;align-items:flex-end;justify-content:center;z-index:2000;opacity:0;pointer-events:none;transition:opacity .22s}
+.pin-modal.open{opacity:1;pointer-events:all}
+.pin-box{background:var(--card);border-radius:22px 22px 0 0;padding:28px 20px 36px;width:100%;max-width:420px;transform:translateY(40px);transition:transform .25s;text-align:center}
+.pin-modal.open .pin-box{transform:translateY(0)}
+.pin-lock-icon{font-size:40px;margin-bottom:10px}
+.pin-title{font-size:17px;font-weight:900;margin-bottom:4px}
+.pin-subtitle{font-size:12px;color:var(--text2);margin-bottom:20px}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:22px}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:var(--purple-light);border:2px solid var(--border);transition:all .15s}
+.pin-dot.filled{background:var(--purple);border-color:var(--purple)}
+.pin-dot.error{background:var(--red);border-color:var(--red)}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto}
+.pin-key{padding:16px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;cursor:pointer;transition:all .13s;color:var(--text)}
+.pin-key:active{background:var(--purple);color:#fff;border-color:var(--purple);transform:scale(.94)}
+.pin-key.del{font-size:18px;background:#fee2e2;border-color:#fecaca;color:var(--red)}
+.pin-key.del:active{background:var(--red);color:#fff}
+.pin-cancel{margin-top:14px;background:none;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;padding:8px 20px}
+
+/* ADMIN BADGE in header */
+.admin-badge{margin-left:auto;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;transition:all .15s;border:1.5px solid rgba(255,255,255,.4);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.admin-badge.locked{background:rgba(255,255,255,.15);color:rgba(255,255,255,.85)}
+.admin-badge.unlocked{background:rgba(255,255,255,.9);color:var(--purple)}
+.admin-badge:active{transform:scale(.95)}
+
+/* LOCK OVERLAY on action cards */
+.lock-overlay{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:20px;margin-bottom:10px;text-align:center;color:var(--text2)}
+.lock-overlay-icon{font-size:30px;margin-bottom:8px}
+.lock-overlay p{font-size:13px;font-weight:600;margin-bottom:12px}
+.lock-overlay-btn{padding:10px 24px;border:none;border-radius:var(--radius-sm);background:var(--purple);color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer}
+.lock-overlay-btn:active{transform:scale(.97)}
 </style>
 </head>
 <body>
@@ -190,6 +222,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <h1>Xodimlar Reytingi</h1>
       <div class="header-sub">Oylik ballik tizim</div>
     </div>
+    <button class="admin-badge locked" id="admin-badge-btn" onclick="onAdminBadgeClick()">
+      <span id="admin-badge-icon">🔒</span>
+      <span id="admin-badge-label">Admin</span>
+    </button>
   </div>
 
   <!-- OY TANLASH STRIP -->
@@ -286,9 +322,128 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   </div>
 </div>
 
+<!-- ADMIN PIN MODAL -->
+<div class="pin-modal" id="pin-modal">
+  <div class="pin-box">
+    <div class="pin-lock-icon">🔐</div>
+    <div class="pin-title">Admin kirish</div>
+    <div class="pin-subtitle">4 raqamli PIN kod kiriting</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <div></div>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+    <button class="pin-cancel" onclick="closePinModal()">Bekor qilish</button>
+  </div>
+</div>
+
 <script>
 const COLORS=['#7c5cbf','#e84393','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316'];
 const OY_NOMLARI=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+// ── ADMIN PIN ──
+const ADMIN_PIN = '1106'; // ← PIN ni shu yerda o'zgartiring
+let isAdmin = false;
+let pinInput = '';
+let pinCb = null;
+
+function onAdminBadgeClick() {
+  if (isAdmin) {
+    // Chiqish
+    isAdmin = false;
+    updateAdminUI();
+    showToast("Admin rejimdan chiqildi", 'info');
+    // Agar boshqaruv tabida bo'lsa, reytingga qayt
+    if (curTab === 'boshqaruv') goTab('reyting');
+    // Detail ko'rinishida bo'lsa refresh
+    if (curEmpId) openEmpDetail(curEmpId);
+  } else {
+    openPinModal(null);
+  }
+}
+
+function openPinModal(cb) {
+  pinInput = '';
+  pinCb = cb;
+  updatePinDots();
+  document.getElementById('pin-modal').classList.add('open');
+}
+
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('open');
+  pinInput = '';
+  pinCb = null;
+}
+
+function pinKey(d) {
+  if (pinInput.length >= 4) return;
+  pinInput += d;
+  updatePinDots();
+  if (pinInput.length === 4) {
+    setTimeout(() => checkPin(), 150);
+  }
+}
+
+function pinDel() {
+  pinInput = pinInput.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.className = 'pin-dot' + (i < pinInput.length ? ' filled' : '');
+  }
+}
+
+function checkPin() {
+  if (pinInput === ADMIN_PIN) {
+    closePinModal();
+    isAdmin = true;
+    updateAdminUI();
+    showToast('✅ Admin rejim faol!', 'success');
+    if (pinCb) { pinCb(); pinCb = null; }
+    else if (curTab === 'boshqaruv') loadBoshqaruv();
+    if (curEmpId) openEmpDetail(curEmpId);
+  } else {
+    // Xato animatsiya
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('pd' + i).className = 'pin-dot filled error';
+    }
+    setTimeout(() => { pinInput = ''; updatePinDots(); }, 600);
+    showToast("❌ PIN noto'g'ri", 'error');
+  }
+}
+
+function updateAdminUI() {
+  const badge = document.getElementById('admin-badge-btn');
+  const icon = document.getElementById('admin-badge-icon');
+  const label = document.getElementById('admin-badge-label');
+  if (isAdmin) {
+    badge.className = 'admin-badge unlocked';
+    icon.textContent = '🔓';
+    label.textContent = 'Admin ✓';
+  } else {
+    badge.className = 'admin-badge locked';
+    icon.textContent = '🔒';
+    label.textContent = 'Admin';
+  }
+}
 
 const POS=[
   {label:"⏰ Vaqtida kelish (imzo qo'yilgan)"},
@@ -401,6 +556,11 @@ function selectMonth(m) {
 // ── NAVIGATION ──
 const TABS=['reyting','xodimlar','boshqaruv'];
 function goTab(tab) {
+  // Boshqaruv tabiga kirishda PIN tekshirish
+  if (tab === 'boshqaruv' && !isAdmin) {
+    openPinModal(() => goTab('boshqaruv'));
+    return;
+  }
   curTab = tab;
   TABS.forEach(t => {
     document.getElementById('sec-'+t).classList.toggle('active', t===tab);
@@ -516,7 +676,7 @@ async function openEmpDetail(id, switchTab) {
         </div>
       </div>
 
-      ${!isPast ? `
+      ${!isPast ? (isAdmin ? `
       <!-- Ball qo'shish card -->
 <div class="action-card">
   <div class="action-title"><div class="aicon" style="background:#dcfce7">✅</div>Ball qo'shish</div>
@@ -552,7 +712,13 @@ async function openEmpDetail(id, switchTab) {
     <button class="apply-btn neg" id="neg-btn" onclick="applyAction('${id}','neg')">❌ Ayirish</button>
   </div>
 </div>
-      ` : ''}
+      ` : `
+<div class="lock-overlay">
+  <div class="lock-overlay-icon">🔒</div>
+  <p>Ball qo'shish va ayirish faqat admin uchun</p>
+  <button class="lock-overlay-btn" onclick="openPinModal(()=>openEmpDetail('${id}'))">🔐 Admin kirish</button>
+</div>
+      `) : ''}
 
       <div class="history-card">
         <div class="history-title">📜 ${monthLabel(selectedMonth)} — harakatlar (${hist.length})</div>
@@ -568,7 +734,7 @@ async function openEmpDetail(id, switchTab) {
         </div>
       </div>
     `;
-    if (!isPast) {
+    if (!isPast && isAdmin) {
       document.getElementById('pos-sel').innerHTML = posOpts;
       document.getElementById('neg-sel').innerHTML = negOpts;
     }
@@ -666,6 +832,7 @@ function showConf(title,msg,cb) {
 function closeConf() { document.getElementById('conf-modal').classList.remove('open'); confCb=null; }
 document.getElementById('conf-ok').onclick=()=>{ closeConf(); if(confCb) confCb(); };
 document.getElementById('conf-modal').onclick=(e)=>{ if(e.target===e.currentTarget) closeConf(); };
+document.getElementById('pin-modal').onclick=(e)=>{ if(e.target===e.currentTarget) closePinModal(); };
 
 // ── TOAST ──
 function showToast(msg,type='info') {
