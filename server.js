@@ -24,7 +24,7 @@ function curMonthStr() {
 
 // ── MIDDLEWARE ──────────────────────────
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 // ── SAFE INIT (optimized + single query) ─
 async function init() {
@@ -248,7 +248,7 @@ app.post('/api/reset', async (req, res) => {
 
 // ── FRONTEND ────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // ── START ───────────────────────────────
