@@ -709,6 +709,29 @@
       flex-shrink: 0
     }
 
+    .hdel-btn {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: all .13s
+    }
+
+    .hdel-btn:active {
+      background: #dc2626;
+      color: #fff;
+      transform: scale(.93)
+    }
+
     .empty-h {
       text-align: center;
       color: var(--text3);
@@ -1439,9 +1462,9 @@
           <div class="level-row">
             <div class="ldot" style="background:#10b981"></div>
             <div class="level-text">
-              <strong>🔥 Katyol yig‘ish → +1 ball</strong><br>
+              <strong>🔥 Katyol yig‘ish → +3 ballgacha</strong><br>
               <span style="color:var(--text2)">
-                Har 2 ta katyol yig‘ilganda 1 ball beriladi
+                3 ta katyol → +1 ball | 4 ta katyol → +2 ball | 5 ta katyol → +3 ball
               </span>
             </div>
           </div>
@@ -1759,6 +1782,39 @@
       return { ...emp, score: newScore };
     }
 
+    async function deleteHistoryItem(histId, empId, points, month) {
+      const hid = parseInt(histId, 10);
+      const pts = parseInt(points, 10);
+
+      // 1. History yozuvini o'chirish
+      const { error: delErr } = await sb
+        .from('history')
+        .delete()
+        .eq('id', hid)
+        .select();
+      if (delErr) throw new Error('History delete: ' + delErr.message);
+
+      // 2. Joriy scoreni olish
+      const { data: existing, error: scoreErr } = await sb
+        .from('monthly_scores')
+        .select('score')
+        .eq('emp_id', empId)
+        .eq('month', month)
+        .single();
+      if (scoreErr && scoreErr.code !== 'PGRST116') throw new Error('Score fetch: ' + scoreErr.message);
+
+      // 3. Scoreni qaytarish
+      if (existing) {
+        const newScore = existing.score - pts;
+        const { error: updErr } = await sb
+          .from('monthly_scores')
+          .update({ score: newScore < 0 ? 0 : newScore })
+          .eq('emp_id', empId)
+          .eq('month', month);
+        if (updErr) throw new Error('Score update: ' + updErr.message);
+      }
+    }
+
     // ── ADMIN PIN ──
     const ADMIN_PIN = '1106'; // ← PIN ni shu yerda o'zgartiring
     let isAdmin = false;
@@ -1949,7 +2005,9 @@
       {
         label: "🔥 Katyol yig‘ish",
         subs: [
-          { reason: "Har 2 ta katyol yig‘ishga 1 ball", pts: 1 }
+          { reason: "3 ta katyol yig‘ildi", pts: 1 },
+          { reason: "4 ta katyol yig‘ildi", pts: 2 },
+          { reason: "5 ta katyol yig‘ildi", pts: 3 },
         ]
       },
       {
@@ -2355,11 +2413,12 @@
         <div class="history-title">📜 ${monthLabel(selectedMonth)} — harakatlar (${hist.length})</div>
         <div class="hist-list">
           ${hist.length ? hist.map(h => `
-            <div class="hist-item">
+            <div class="hist-item" id="hi-${h.id}">
               <div class="hdot" style="background:${h.points > 0 ? '#22c55e' : '#ef4444'}"></div>
               <span class="htext">${h.label}</span>
               <span class="hpts" style="color:${h.points > 0 ? '#16a34a' : '#dc2626'}">${h.points > 0 ? '+' : ''}${h.points}</span>
               <span class="htime">${fmtTime(h.created_at)}</span>
+              ${isAdmin && isCurrentMonth(selectedMonth) ? `<button class="hdel-btn" data-hid="${h.id}" data-empid="${id}" data-pts="${h.points}" data-month="${selectedMonth}" onclick="confDeleteHistory(this)" title="O'chirish">🗑</button>` : ''}
             </div>`).join('') :
             '<div class="empty-h">Bu oyda hech qanday harakat yo\'q</div>'}
         </div>
@@ -2484,6 +2543,29 @@
       });
     }
 
+    async function confDeleteHistory(btn) {
+      const histId = btn.dataset.hid;
+      const empId  = btn.dataset.empid;
+      const points = parseInt(btn.dataset.pts, 10);
+      const month  = btn.dataset.month;
+      const sign   = points > 0 ? '+' : '';
+      showConf(
+        "Yozuvni o'chirish",
+        `Bu harakat (${sign}${points} ball) o'chiriladi va ball qaytariladi. Davom etasizmi?`,
+        async () => {
+          try {
+            await deleteHistoryItem(histId, empId, points, month);
+            showToast("Yozuv o'chirildi, ball qaytarildi", 'info');
+            // Refresh detail to update score boxes and history list
+            await openEmpDetail(empId);
+          } catch (e) {
+            console.error(e);
+            showToast(e.message || "Xatolik yuz berdi", 'error');
+          }
+        }
+      );
+    }
+
     // ── MODAL ──
     function showConf(title, msg, cb) {
       document.getElementById('conf-title').textContent = title;
@@ -2492,7 +2574,7 @@
       confCb = cb;
     }
     function closeConf() { document.getElementById('conf-modal').classList.remove('open'); confCb = null; }
-    document.getElementById('conf-ok').onclick = () => { closeConf(); if (confCb) confCb(); };
+    document.getElementById('conf-ok').onclick = () => { const cb = confCb; closeConf(); if (cb) cb(); };
     document.getElementById('conf-modal').onclick = (e) => { if (e.target === e.currentTarget) closeConf(); };
     document.getElementById('pin-modal').onclick = (e) => { if (e.target === e.currentTarget) closePinModal(); };
 

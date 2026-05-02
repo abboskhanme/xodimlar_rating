@@ -230,6 +230,35 @@ app.get('/api/months', async (req, res) => {
   }
 });
 
+// ── DELETE HISTORY ITEM ─────────────────
+app.delete('/api/history/:id', async (req, res) => {
+  try {
+    const histId = req.params.id;
+
+    // Get history item to know how many points to reverse
+    const { rows: histRows } = await pool.query(
+      'SELECT * FROM history WHERE id = $1', [histId]
+    );
+    if (!histRows.length) return res.status(404).json({ error: 'Topilmadi' });
+
+    const h = histRows[0];
+
+    // Delete history record
+    await pool.query('DELETE FROM history WHERE id = $1', [histId]);
+
+    // Reverse the points in monthly_scores
+    await pool.query(`
+      UPDATE monthly_scores
+      SET score = score - $1
+      WHERE emp_id = $2 AND month = $3
+    `, [h.points, h.emp_id, h.month]);
+
+    res.json({ ok: true, reversed: h.points });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── RESET ───────────────────────────────
 app.post('/api/reset', async (req, res) => {
   try {
